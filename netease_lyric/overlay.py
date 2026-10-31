@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """overlay.py - 可选 GUI: 桌面悬浮歌词窗(基于 :class:`NeteaseLyric` API)。
 
-本模块是"接口层"的一个消费者: 只读取 ``api.state()``, 不包含任何内存/网络逻辑。
+显示上一句/当前句/翻译/下一句、进度条, 以及专辑封面(可选, 需要 Pillow)、
+专辑名和歌手列表。本模块是"接口层"的一个消费者: 只读取 ``api.state()``,
+不包含任何内存/网络逻辑。
 tkinter 只有导入本模块时才加载, 纯 API 调用不会依赖 GUI。
 
 启动方式::
@@ -18,6 +20,11 @@ import time
 
 import tkinter as tk
 import tkinter.font as tkfont
+
+try:  # Pillow 可选: 只有显示专辑封面时才需要
+    from PIL import Image, ImageOps, ImageTk
+except Exception:  # pragma: no cover - 没装 Pillow 时退化为纯文字
+    Image = ImageOps = ImageTk = None
 
 from ._version import DISPLAY_NAME, __version__
 from .player import NeteaseLyric, format_ms
@@ -93,6 +100,8 @@ class _OverlayApp:
         self.api = NeteaseLyric(lyric_offset_ms=offset, auto_start=True)
         self._dragging = False
         self._drag_off = (0, 0)
+        self._cover_key = object()   # 当前封面(song_id, path), 变化时才重新加载
+        self._cover_img = None       # 保持 PhotoImage 引用, 防止被回收
 
         self._build_ui()
         self.root.after(100, self._tick)
@@ -131,6 +140,8 @@ class _OverlayApp:
         _set_win_pos(self._hwnd, x, y, w, h)
 
         f_head = tkfont.Font(family="Microsoft YaHei UI", size=10)
+        f_meta = tkfont.Font(family="Microsoft YaHei UI",
+                             size=max(9, min(11, self.font_size - 12)))
         f_side = tkfont.Font(family="Microsoft YaHei UI",
                              size=max(9, self.font_size - 11))
         f_cur = tkfont.Font(family="Microsoft YaHei UI", size=self.font_size,
@@ -139,18 +150,34 @@ class _OverlayApp:
                            size=max(9, self.font_size - 9))
 
         pad = 20
-        self.lbl_head = tk.Label(self.root, text="♪ 正在连接网易云…", font=f_head,
+        self.body = tk.Frame(self.root, bg=BG)
+        self.body.pack(fill="both", expand=True)
+
+        # 左侧专辑封面(未缓存/未装 Pillow 时宽度为 0, 不占位)
+        self._cover_box = tk.Frame(self.body, bg=BG, width=0)
+        self._cover_box.pack(side="left", fill="y", padx=(16, 0), pady=(12, 10))
+        self._cover_box.pack_propagate(False)
+        self.lbl_cover = tk.Label(self._cover_box, bg=BG, bd=0)
+        self.lbl_cover.pack(side="top", anchor="n")
+
+        self._text = tk.Frame(self.body, bg=BG)
+        self._text.pack(side="left", fill="both", expand=True)
+
+        self.lbl_head = tk.Label(self._text, text="♪ 正在连接网易云…", font=f_head,
                                  fg="#7d8598", bg=BG, anchor="w")
         self.lbl_head.pack(fill="x", padx=pad, pady=(9, 0))
-        self.lbl_prev = tk.Label(self.root, text=" ", font=f_side, fg="#6b7280", bg=BG)
+        self.lbl_meta = tk.Label(self._text, text=" ", font=f_meta,
+                                 fg="#8a93a6", bg=BG, anchor="w")
+        self.lbl_meta.pack(fill="x", padx=pad, pady=(1, 0))
+        self.lbl_prev = tk.Label(self._text, text=" ", font=f_side, fg="#6b7280", bg=BG)
         self.lbl_prev.pack(fill="x", padx=pad, pady=(3, 0))
-        self.lbl_cur = tk.Label(self.root, text=" ", font=f_cur, fg="#ffffff", bg=BG,
+        self.lbl_cur = tk.Label(self._text, text=" ", font=f_cur, fg="#ffffff", bg=BG,
                                 wraplength=w - 80, justify="center")
         self.lbl_cur.pack(fill="x", padx=pad, pady=(2, 0))
-        self.lbl_tr = tk.Label(self.root, text=" ", font=f_tr, fg="#8ecdf7", bg=BG,
+        self.lbl_tr = tk.Label(self._text, text=" ", font=f_tr, fg="#8ecdf7", bg=BG,
                                wraplength=w - 80, justify="center")
         self.lbl_tr.pack(fill="x", padx=pad, pady=(0, 0))
-        self.lbl_next = tk.Label(self.root, text=" ", font=f_side, fg="#6b7280", bg=BG)
+        self.lbl_next = tk.Label(self._text, text=" ", font=f_side, fg="#6b7280", bg=BG)
         self.lbl_next.pack(fill="x", padx=pad, pady=(3, 6))
 
         self.bar_bg = tk.Frame(self.root, bg="#1c2230", height=3)
@@ -158,8 +185,9 @@ class _OverlayApp:
         self.bar = tk.Frame(self.bar_bg, bg="#5b8def", height=3, width=1)
         self.bar.place(x=0, y=0, relheight=1, relwidth=0)
 
-        for wd in (self.root, self.lbl_head, self.lbl_prev, self.lbl_cur,
-                   self.lbl_tr, self.lbl_next, self.bar_bg):
+        for wd in (self.root, self.body, self._cover_box, self.lbl_cover,
+                   self._text, self.lbl_head, self.lbl_meta, self.lbl_prev,
+                   self.lbl_cur, self.lbl_tr, self.lbl_next, self.bar_bg):
             wd.bind("<ButtonPress-1>", self._drag_start)
             wd.bind("<B1-Motion>", self._drag_move)
         self.root.bind("<Escape>", lambda e: self.quit())
@@ -170,6 +198,48 @@ class _OverlayApp:
     def _set(label, text: str):
         if label.cget("text") != text:
             label.configure(text=text)
+
+    def _apply_wrap(self, has_cover: bool):
+        """有封面时正文变窄, 同步调整歌词换行宽度。"""
+        wrap = self.width - (200 if has_cover else 80)
+        self.lbl_cur.configure(wraplength=wrap)
+        self.lbl_tr.configure(wraplength=wrap)
+
+    def _set_cover(self, photo):
+        if photo is None:
+            self._cover_img = None
+            self.lbl_cover.configure(image="")
+            self._cover_box.configure(width=0)
+            self._apply_wrap(False)
+            return
+        self._cover_img = photo
+        self.lbl_cover.configure(image=photo)
+        self._cover_box.configure(width=120)
+        self._apply_wrap(True)
+
+    def _sync_cover(self, track):
+        """按当前歌曲的本地封面路径加载缩略图; 同一张图不重复加载。"""
+        path = (track or {}).get("cover_path") or ""
+        key = ((track or {}).get("song_id"), path)
+        if key == self._cover_key:
+            return
+        self._cover_key = key
+        if not path or Image is None or ImageTk is None:
+            self._set_cover(None)
+            return
+        try:
+            with Image.open(path) as im:
+                im = im.convert("RGB")
+                if ImageOps is not None:
+                    im = ImageOps.fit(im, (120, 120), Image.LANCZOS)
+                else:
+                    im.thumbnail((120, 120))
+            photo = ImageTk.PhotoImage(im)
+        except Exception:
+            LOG.debug("cover load failed: %s", path, exc_info=True)
+            self._set_cover(None)
+            return
+        self._set_cover(photo)
 
     # ------------------------------------------------------------- events
     def _drag_start(self, e):
@@ -241,6 +311,19 @@ class _OverlayApp:
             elif not st["clock_ready"]:
                 head += "   · 等待播放定位…"
         self._set(self.lbl_head, head)
+
+        # 专辑/歌手信息(来自网易云 song detail, 异步补全)
+        meta = []
+        if track:
+            if track.get("album"):
+                meta.append("专辑 " + track["album"])
+            artists = track.get("artists") or []
+            if artists:
+                meta.append("歌手 " + " / ".join(artists))
+            elif track.get("artist"):
+                meta.append("歌手 " + track["artist"])
+        self._set(self.lbl_meta, "    ·    ".join(meta) if meta else " ")
+        self._sync_cover(track)
 
         if st.get("progress") is not None:
             self.bar.place_configure(relwidth=float(st["progress"]))

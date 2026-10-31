@@ -12,12 +12,14 @@
     GET /api/now-playing  当前歌曲 + 进度
     GET /api/line         当前歌词行 + 上/下一句
     GET /api/lyrics       当前歌曲完整歌词
+    GET /api/cover        当前歌曲封面图片(本地缓存)
     GET /api/stream       SSE 状态流(状态变化时推送)
     GET /api/health       健康检查
     GET /api/docs         端点说明
 """
 import json
 import logging
+import os
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -50,8 +52,12 @@ DEMO_HTML = r"""<!doctype html>
   #bar>i{display:block;height:100%;width:0;
     background:linear-gradient(90deg,#4f7cff,#7fb0ff);transition:width .2s linear}
   #err{color:#e06767;font-size:13px;margin-top:14px;min-height:18px}
+  #cover{display:none;width:clamp(120px,15vw,190px);height:clamp(120px,15vw,190px);
+    object-fit:cover;border-radius:14px;margin-bottom:22px;
+    box-shadow:0 12px 40px rgba(0,0,0,.55)}
 </style></head>
 <body><div id="wrap">
+  <img id="cover" alt="">
   <div id="head">♪ 连接中…</div>
   <div id="prev"></div>
   <div id="cur"></div>
@@ -64,11 +70,26 @@ DEMO_HTML = r"""<!doctype html>
 const $ = (id) => document.getElementById(id);
 const fmt = (ms) => ms==null ? "--:--"
   : String(Math.floor(ms/60000)).padStart(2,"0")+":"+String(Math.floor(ms/1000)%60).padStart(2,"0");
+// 封面只在 song_id 变化时刷新, 加载失败则隐藏, 不打扰歌词布局
+let coverSongId;
+function syncCover(t){
+  const sid = t && t.song_id != null ? String(t.song_id) : null;
+  if(sid === coverSongId) return;
+  coverSongId = sid;
+  const img = $("cover");
+  img.style.display = "none";
+  if(sid === null){ img.removeAttribute("src"); return; }
+  img.onload  = () => { img.style.display = "block"; };
+  img.onerror = () => { img.style.display = "none"; };
+  img.alt = t.title || "";
+  img.src = "/api/cover?ts=" + Date.now();
+}
 async function tick(){
   try{
     const r = await fetch("/api/state", {cache:"no-store"});
     const s = await r.json();
     $("err").textContent = s.error || "";
+    syncCover(s.track);
     if(!s.netease_running){
       $("head").textContent = "♪ 未检测到网易云音乐客户端";
       return;
@@ -99,10 +120,22 @@ ENDPOINTS = {
     "GET /api/now-playing": "当前歌曲 + 进度",
     "GET /api/line": "当前歌词行 + 上/下一句",
     "GET /api/lyrics": "当前歌曲完整歌词 (含时间轴/翻译)",
+    "GET /api/cover": "当前歌曲封面图片 (本地缓存)",
     "GET /api/stream": "SSE 状态流 (text/event-stream)",
     "GET /api/health": "健康检查",
     "GET /api/docs": "本说明",
 }
+
+
+def _image_content_type(data: bytes) -> str:
+    """按文件头判断图片 Content-Type(网易云封面通常为 JPEG)。"""
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return "application/octet-stream"
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -175,6 +208,23 @@ class _Handler(BaseHTTPRequestHandler):
                     "ok": st["ok"], "track": st["track"],
                     "lines": [ln.to_dict() for ln in api.lyrics()],
                 })
+            if path == "/api/cover":
+                p = api.cover_path()
+                if not p:
+                    p = api.ensure_cover()
+                if not p or not os.path.isfile(p):
+                    return self._send_json({"ok": False,
+                                            "error": "cover not available"}, 404)
+                try:
+                    with open(p, "rb") as f:
+                        data = f.read()
+                except OSError:
+                    return self._send_json({"ok": False,
+                                            "error": "cover not available"}, 404)
+                if not data:
+                    return self._send_json({"ok": False,
+                                            "error": "cover not available"}, 404)
+                return self._send(data, _image_content_type(data))
             if path == "/api/stream":
                 return self._stream(api)
             return self._send_json({"ok": False, "error": "not found"}, 404)

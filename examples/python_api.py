@@ -21,6 +21,11 @@ def main():
         song = api.now_playing()
         print(f"\n♪ {song.title}    ({format_ms(song.duration_ms)})")
         print(f"  song_id={song.song_id}  来源={song.source}")
+        print(f"  歌手={'/'.join(song.artists or []) or song.artist or '-'}")
+        print(f"  专辑={song.album or '(未知)'}")
+        print(f"  封面={song.cover_url or '(无)'}")
+        print(f"  封面缓存={song.cover_path or '(未缓存)'}")
+        # 需要本地封面文件时: api.ensure_cover() 会懒下载并返回路径
         print(f"  进度={format_ms(api.position_ms())}  暂停={api.is_paused()}")
 
         line = api.current_line()

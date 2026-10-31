@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""netease_lyric - 网易云音乐实时播放状态 / 歌词 API(Windows)。
+"""netease_lyric - 网易云音乐实时播放状态 / 歌曲信息 / 歌词 API(Windows)。
 
 这是一个可被任意 Python 项目安装并调用的库:
 
@@ -9,14 +9,19 @@
 
     with NeteaseLyric() as api:
         api.wait_for_ready()
-        print(api.now_playing().title)      # 当前歌曲
+        track = api.now_playing()
+        print(track.title)                  # 当前歌曲 "歌名 - 歌手"
+        print(track.artists)                # 歌手(作者)列表
+        print(track.album)                  # 专辑名
+        print(track.cover_url)              # 封面图地址
         print(api.position_ms())            # 实时播放进度(ms)
         print(api.current_line().text)      # 当前歌词行
 
 注意:
   * 仅支持 Windows(需要读取网易云音乐 PC 客户端 cloudmusic.exe 的内存);
   * GUI(悬浮歌词窗)是可选模块, 只有显式调用 ``python -m netease_lyric overlay``
-    或入口 ``netease-lyric-overlay`` 时才会加载 tkinter, 纯接口调用不会依赖 GUI。
+    或入口 ``netease-lyric-overlay`` 时才会加载 tkinter, 纯接口调用不会依赖 GUI;
+  * 悬浮窗显示专辑封面需要可选依赖 Pillow, 未安装时只显示文字。
 """
 import sys
 
@@ -28,6 +33,8 @@ __all__ = [
     "LyricLine",
     "format_ms",
     "get_song_lyrics",
+    "get_song_detail",
+    "ensure_cover",
     "API_NAME",
     "DISPLAY_NAME",
     "__version__",
@@ -44,9 +51,9 @@ def __getattr__(name):
     if name in __all__ and name != "__version__":
         if sys.platform != "win32":
             raise RuntimeError(_WINDOWS_ONLY)
-        if name == "get_song_lyrics":
-            from .lyrics import get_song_lyrics
-            return get_song_lyrics
+        if name in ("get_song_lyrics", "get_song_detail", "ensure_cover"):
+            from . import lyrics
+            return getattr(lyrics, name)
         from . import player
         return getattr(player, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

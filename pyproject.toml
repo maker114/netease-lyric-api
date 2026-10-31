@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "netease-lyric-api"
 dynamic = ["version"]
-description = "网易云音乐实时播放状态/歌词 API + 可选桌面悬浮歌词窗 (Windows)"
+description = "网易云音乐实时播放状态/歌曲信息/歌词 API + 可选桌面悬浮歌词窗 (Windows)"
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
 authors = [{ name = "DSH" }]
-keywords = ["netease", "cloudmusic", "lyrics", "now-playing", "windows"]
+keywords = ["netease", "cloudmusic", "lyrics", "now-playing", "album", "cover", "windows"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Win32 (MS Windows)",
@@ -25,6 +25,7 @@ dependencies = ["numpy>=1.20"]
 
 [project.optional-dependencies]
 dev = ["build", "pytest"]
+overlay = ["Pillow>=9.0"]
 
 [project.scripts]
 netease-lyric = "netease_lyric.cli:main"

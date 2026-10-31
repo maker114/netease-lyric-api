@@ -22,14 +22,15 @@ from __future__ import annotations
 
 import bisect
 import logging
+import os
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ._version import __version__
 from .clock import PlaybackClock, find_ncm_window, get_window_title, parse_title
-from .lyrics import get_song_lyrics
+from .lyrics import ensure_cover as _download_cover, get_song_lyrics
 
 log = logging.getLogger("netease_lyric")
 
@@ -48,6 +49,16 @@ def format_ms(ms: Optional[float]) -> str:
     return f"{total // 60:02d}:{total % 60:02d}"
 
 
+def _cover_ok(path: Optional[str]) -> bool:
+    """封面缓存文件是否可用(存在且非空, 0 字节视为损坏)。"""
+    if not path:
+        return False
+    try:
+        return os.path.getsize(path) > 0
+    except OSError:
+        return False
+
+
 @dataclass
 class Track:
     """当前播放的歌曲信息。"""
@@ -57,6 +68,10 @@ class Track:
     duration_ms: int = 0
     source: str = ""        # queue / search / ""
     album: str = ""
+    album_id: Optional[int] = None
+    artists: List[str] = field(default_factory=list)  # 网易云标准歌手名列表
+    cover_url: str = ""     # 封面图地址(https)
+    cover_path: str = ""    # 本地已缓存的封面文件路径(未缓存为 "")
 
     @property
     def title(self) -> str:
@@ -66,11 +81,15 @@ class Track:
         return {
             "name": self.name,
             "artist": self.artist,
+            "artists": list(self.artists),
             "title": self.title,
             "song_id": self.song_id,
             "duration_ms": self.duration_ms,
             "source": self.source,
             "album": self.album,
+            "album_id": self.album_id,
+            "cover_url": self.cover_url,
+            "cover_path": self.cover_path,
         }
 
 
@@ -212,6 +231,47 @@ class NeteaseLyric:
         """当前歌曲的完整歌词(带时间轴与翻译)。"""
         with self._lock:
             return list(self._lines)
+
+    def cover_path(self) -> Optional[str]:
+        """当前歌曲已缓存的封面本地文件路径; 未缓存/无歌曲返回 None。"""
+        with self._lock:
+            trk = self._track
+            path = trk.cover_path if trk else ""
+        return path if _cover_ok(path) else None
+
+    def ensure_cover(self) -> Optional[str]:
+        """确保当前歌曲封面已缓存, 返回本地文件路径; 失败返回 None。
+
+        播放歌曲信息里已有封面缓存时直接返回; 否则按 song_id + cover_url
+        懒下载(可阻塞数秒, 不会持有内部锁)。下载期间切歌则丢弃结果。
+        """
+        with self._lock:
+            trk = self._track
+            if trk is None:
+                return None
+            song_id = trk.song_id
+            cover_url = trk.cover_url
+            path = trk.cover_path if _cover_ok(trk.cover_path) else ""
+            gen = self._song_gen
+        if path:
+            return path
+        if not song_id or not cover_url:
+            return None
+        try:
+            path = _download_cover(song_id, cover_url)
+        except Exception:  # 下载失败不影响主流程
+            log.exception("cover fetch failed")
+            return None
+        if not path:
+            return None
+        with self._lock:
+            trk = self._track
+            if trk is not None and self._song_gen == gen and trk.song_id == song_id:
+                trk.cover_path = path
+            else:
+                # 下载期间切歌了, 这张封面不属于当前歌曲
+                return None
+        return path
 
     def state(self) -> Dict[str, Any]:
         """完整状态快照(dict, 可直接 JSON 序列化), 见 README 的字段表。"""
@@ -450,6 +510,14 @@ class NeteaseLyric:
                     trk.song_id = info.get("id")
                     trk.duration_ms = dur
                     trk.source = info.get("source") or ""
+                    trk.artists = list(info.get("artists") or [])
+                    trk.album = info.get("album") or ""
+                    trk.album_id = info.get("album_id")
+                    trk.cover_url = info.get("cover_url") or ""
+                    trk.cover_path = info.get("cover_path") or ""
+                    if not trk.artist:
+                        trk.artist = (info.get("artist")
+                                      or "/".join(info.get("artists") or []))
                 self._last_error = None
                 track = self._track.to_dict() if self._track else None
                 count = len(lines)

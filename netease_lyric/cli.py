@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
-"""cli.py - 命令行入口: 状态查询 / JSON / 监听 / HTTP 服务 / 悬浮窗。
+"""cli.py - 命令行入口: 状态查询 / JSON / 监听 / 封面 / HTTP 服务 / 悬浮窗。
 
 安装后可直接使用::
 
     netease-lyric status          # 打印当前播放与歌词状态
     netease-lyric json            # 输出完整状态 JSON
     netease-lyric watch           # 持续打印歌词行变化
+    netease-lyric cover           # 打印当前歌曲封面路径(可 --out 另存)
     netease-lyric serve           # 启动本地 HTTP API (默认 127.0.0.1:23517)
     netease-lyric overlay         # 启动桌面悬浮歌词窗(可选 GUI)
 """
 import argparse
 import json
+import shutil
 import sys
 import time
 
@@ -33,6 +35,8 @@ def _print_status(api) -> int:
         print("… 网易云已运行, 正在识别当前歌曲")
         return 0
     print(f"♪ {tr['title']}")
+    if tr.get("album"):
+        print(f"  专辑 {tr['album']}")
     bits = []
     if tr.get("song_id"):
         bits.append(f"song_id={tr['song_id']}")
@@ -42,6 +46,10 @@ def _print_status(api) -> int:
         bits.append(f"时长={_fmt(tr['duration_ms'])}")
     if bits:
         print("  " + "  ".join(bits))
+    if tr.get("cover_path"):
+        print(f"  封面 {tr['cover_path']}")
+    elif tr.get("cover_url"):
+        print(f"  封面 {tr['cover_url']} (未缓存)")
     state = "⏸ 暂停" if st["paused"] else "▶ 播放中"
     progress = (f"  ({st['progress'] * 100:.0f}%)"
                 if st.get("progress") is not None else "")
@@ -91,12 +99,32 @@ def _cmd_watch(api) -> int:
         return 0
 
 
+def _cmd_cover(args) -> int:
+    """打印当前歌曲封面缓存路径; --out 时另存一份。"""
+    from .player import NeteaseLyric
+    api = NeteaseLyric()
+    try:
+        api.wait_for_ready(timeout=args.wait)
+        path = api.ensure_cover()
+        if not path:
+            print("✗ 未能获取当前歌曲封面(未识别到歌曲、纯音乐或网络不可达)")
+            return 1
+        print(path)
+        if args.out:
+            shutil.copyfile(path, args.out)
+            print(f"✓ 封面已保存到 {args.out}")
+        return 0
+    finally:
+        api.stop()
+
+
 def _cmd_serve(args) -> int:
     from .server import LyricApiServer
     srv = LyricApiServer(host=args.host, port=args.port,
                          lyric_offset_ms=args.offset)
     print(f"HTTP API 已启动: http://{args.host}:{args.port}")
-    print(f"  GET /api/state | /api/now-playing | /api/line | /api/lyrics | /api/stream")
+    print("  GET /api/state | /api/now-playing | /api/line | /api/lyrics"
+          " | /api/cover | /api/stream")
     print(f"  浏览器打开 http://{args.host}:{args.port}/ 可看实时歌词页")
     print("Ctrl+C 退出")
     try:
@@ -139,6 +167,11 @@ def _cmd_doctor(args) -> int:
         info("tkinter: 可用 (可选 GUI)")
     except Exception:
         info("tkinter: 不可用 (不影响纯接口调用, 只是无法使用悬浮窗 GUI)")
+    try:
+        import PIL  # noqa: F401
+        info("Pillow: 可用 (悬浮窗可显示专辑封面)")
+    except Exception:
+        info("Pillow: 不可用 (悬浮窗不显示封面, 歌词/专辑/歌手文字不受影响)")
 
     from .clock import close_handle, find_ncm_window, get_window_title, open_process
     hwnd, pid = find_ncm_window()
@@ -229,6 +262,10 @@ def main(argv=None) -> int:
     p = sub.add_parser("watch", help="持续打印歌词行变化")
     p.add_argument("--offset", type=int, default=0)
 
+    p = sub.add_parser("cover", help="打印或保存当前歌曲封面")
+    p.add_argument("--out", metavar="PATH", help="把封面另存到指定路径")
+    p.add_argument("--wait", type=float, default=8.0, help="等待就绪的最长秒数")
+
     p = sub.add_parser("serve", help="启动本地 HTTP API")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=23517)
@@ -259,6 +296,8 @@ def main(argv=None) -> int:
         return _cmd_serve(args)
     if args.cmd == "doctor":
         return _cmd_doctor(args)
+    if args.cmd == "cover":
+        return _cmd_cover(args)
 
     # 以下命令需要实例化 API
     from .player import NeteaseLyric
