@@ -19,13 +19,13 @@ import time
 import tkinter as tk
 import tkinter.font as tkfont
 
-from ._version import __version__
+from ._version import DISPLAY_NAME, __version__
 from .player import NeteaseLyric, format_ms
 
 LOG = logging.getLogger("netease_lyric.overlay")
 
 APP_DIR = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
-                       "NeteaseLyricApi")
+                       DISPLAY_NAME)
 CONFIG_FILE = os.path.join(APP_DIR, "window.json")
 BG = "#0b0d12"
 
@@ -105,7 +105,7 @@ class _OverlayApp:
         self.root.attributes("-topmost", True)
         self.root.attributes("-alpha", self.opacity)
         self.root.configure(bg=BG)
-        self.root.title("NeteaseLyricOverlay")
+        self.root.title(f"{DISPLAY_NAME} Overlay")
 
         w, h = self.width, 226
         sw, sh = _screen_size()

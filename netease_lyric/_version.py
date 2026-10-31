@@ -3,3 +3,5 @@
 
 __version__ = "1.0.0"
 API_NAME = "netease-lyric-api"
+#: Windows 下的显示名(HTTP Server 头 / 配置与缓存目录)
+DISPLAY_NAME = "NeteaseLyricApi"

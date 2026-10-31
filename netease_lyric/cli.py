@@ -14,7 +14,7 @@ import json
 import sys
 import time
 
-from ._version import __version__
+from ._version import API_NAME, __version__
 
 
 def _fmt(ms):
@@ -24,7 +24,7 @@ def _fmt(ms):
 
 def _print_status(api) -> int:
     st = api.state()
-    print(f"netease-lyric-api v{__version__}")
+    print(f"{API_NAME} v{__version__}")
     if not st["netease_running"]:
         print("✗ 未检测到网易云音乐客户端 (cloudmusic.exe) 在运行")
         return 1

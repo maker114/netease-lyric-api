@@ -209,7 +209,7 @@ netease-lyric overlay --reset-pos            # 重置窗口位置
 - 切歌自动换歌词、自动重新定位；暂停显示 ⏸；纯音乐显示"纯音乐 / 暂无歌词"
 - 日志：`%LOCALAPPDATA%\NeteaseLyricApi\overlay.log`
 
-GUI 只是 API 的一个消费者：`lyric_overlay.py` 风格，核心逻辑全部在接口层。
+GUI 只是 API 的一个消费者：`overlay.py` 风格，核心逻辑全部在接口层。
 
 ---
 

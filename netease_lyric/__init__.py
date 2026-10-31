@@ -20,7 +20,7 @@
 """
 import sys
 
-from ._version import API_NAME, __version__
+from ._version import API_NAME, DISPLAY_NAME, __version__
 
 __all__ = [
     "NeteaseLyric",
@@ -28,6 +28,8 @@ __all__ = [
     "LyricLine",
     "format_ms",
     "get_song_lyrics",
+    "API_NAME",
+    "DISPLAY_NAME",
     "__version__",
 ]
 

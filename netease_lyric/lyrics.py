@@ -12,9 +12,11 @@ import re
 import urllib.parse
 import urllib.request
 
+from ._version import DISPLAY_NAME
+
 CACHE_DIR = os.environ.get("NETEASE_LYRIC_CACHE_DIR") or os.path.join(
     os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
-    "NeteaseLyricApi", "cache")
+    DISPLAY_NAME, "cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 PLAYING_LIST = os.path.join(

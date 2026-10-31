@@ -23,7 +23,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
-from ._version import __version__
+from ._version import DISPLAY_NAME, __version__
 from .player import NeteaseLyric
 
 log = logging.getLogger("netease_lyric.server")
@@ -106,7 +106,7 @@ ENDPOINTS = {
 
 
 class _Handler(BaseHTTPRequestHandler):
-    server_version = f"NeteaseLyricApi/{__version__}"
+    server_version = f"{DISPLAY_NAME}/{__version__}"
     protocol_version = "HTTP/1.1"
 
     # 静默默认日志, 交给 logging 模块
