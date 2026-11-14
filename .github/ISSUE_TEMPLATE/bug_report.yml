@@ -1,0 +1,63 @@
+name: Bug 报告
+description: 反馈无法使用、报错、歌曲/歌词匹配错误等问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。提交前请先运行 `netease-lyric doctor`，并确认网易云音乐 PC 客户端正在播放。
+        纯音乐/无版权歌曲显示“暂无歌词”属于正常现象。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述
+      description: 发生了什么？你期望的结果是什么？
+      placeholder: 例如：切歌后进度一直为空，日志显示……
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows 版本
+      placeholder: Windows 11 23H2
+    validations:
+      required: true
+  - type: input
+    id: netease
+    attributes:
+      label: 网易云音乐版本
+      placeholder: 3.x.x
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python 版本
+      placeholder: 3.11.9
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`netease-lyric doctor` 输出"
+      description: 请完整粘贴自检输出（可隐去个人信息）
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志 / 复现命令
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认
+      options:
+        - label: 已搜索现有 Issues，确认不是重复问题
+          required: true
+        - label: 网易云音乐 PC 客户端正在运行
+          required: true
+        - label: 本程序与网易云使用相同权限运行
+          required: true

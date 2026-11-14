@@ -1,0 +1,41 @@
+name: 功能建议
+description: 希望新增的能力、平台或使用场景
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你遇到的问题 / 使用场景
+      description: 现在哪里不方便？希望解决什么？
+      placeholder: 例如：想把当前歌词推给 OBS 的文本源 / 想接 Home Assistant……
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望的方案
+      description: 你希望 API / CLI / HTTP / 悬浮窗 增加什么？
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的替代方案
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 影响范围
+      options:
+        - Python API
+        - 命令行
+        - HTTP API / SSE
+        - 悬浮窗 GUI
+        - 文档 / 安装
+        - 其他
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        提示：本项目仅支持 Windows，且对网易云客户端只读、不提供播放控制。

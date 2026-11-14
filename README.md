@@ -1,9 +1,20 @@
 # netease-lyric-api
 
+[![license](https://img.shields.io/github/license/maker114/netease-lyric-api?label=license)](LICENSE)
+[![release](https://img.shields.io/github/v/tag/maker114/netease-lyric-api?label=release)](https://github.com/maker114/netease-lyric-api/tags)
+[![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white)](https://github.com/maker114/netease-lyric-api)
+[![python](https://img.shields.io/badge/python-3.8%2B-3776AB?logo=python&logoColor=white)](https://github.com/maker114/netease-lyric-api)
+[![tests](https://github.com/maker114/netease-lyric-api/actions/workflows/tests.yml/badge.svg)](https://github.com/maker114/netease-lyric-api/actions/workflows/tests.yml)
+[![GitHub stars](https://img.shields.io/github/stars/maker114/netease-lyric-api?style=social)](https://github.com/maker114/netease-lyric-api)
+
+![netease-lyric-api 社交预览](docs/social-preview.png)
+
 网易云音乐 PC 端的**实时歌词 + 歌曲信息读取 API**，附带一个可选的**桌面悬浮歌词窗**。
 
 只读 `cloudmusic.exe` 进程内存，不修改网易云客户端、不需要登录、不注入 DLL。
 除了歌词和播放进度，还能拿到当前歌曲的**歌手（作者）、专辑名和专辑封面**。
+
+> 📖 **技术分享**：播放钟原理、架构取舍与已知局限见 [技术分享稿](docs/技术分享-netease-lyric-api.md)，适合想了解实现细节或二次开发的同学。
 
 > 平台：**Windows 10/11**　Python：**3.8+**　依赖：**numpy**（悬浮窗封面显示可选 **Pillow**）
 
@@ -335,6 +346,11 @@ netease-lyric-api/
 ├── tests/                  # 标准库 unittest 测试（不需要网易云/网络）
 ├── docs/preview.png        # GUI 预览图
 ├── docs/demo-overlay.png   # 带封面/专辑/歌手的悬浮窗截图
+├── docs/social-preview.png # GitHub 社交预览图（1280×640）
+├── docs/技术分享-netease-lyric-api.md  # 技术分享：原理 / 架构 / 已知局限
+├── docs/技术分享-摘要.txt   # 一句话摘要（可直接用于仓库 About）
+├── .github/                # CI / Release 工作流、Issue / PR 模板
+├── CONTRIBUTING.md         # 贡献指南
 ├── pyproject.toml
 ├── requirements.txt
 ├── run_api.bat
@@ -343,11 +359,31 @@ netease-lyric-api/
 └── README.md
 ```
 
+## 相关链接与贡献
+
+- **GitHub**：<https://github.com/maker114/netease-lyric-api>
+- **问题反馈 / 功能建议**：[Issues](https://github.com/maker114/netease-lyric-api/issues)
+- **技术分享**：[原理、架构与已知局限](docs/技术分享-netease-lyric-api.md)
+- **调用示例**：[examples/](examples/)
+- **贡献指南**：[CONTRIBUTING.md](CONTRIBUTING.md)
+- **更新日志**：见下方 [更新日志](#更新日志)
+
+如果这个项目对你有帮助，欢迎点一个 ⭐ Star，也欢迎分享给做直播、OBS 浮层或桌面歌词的朋友。
+
 ## License
 
 MIT
 
 ## 更新日志
+
+### 仓库完善（2026-11-15，非版本发布）
+
+- 新增 GitHub Actions：Windows 单元测试 + Python 3.8 语法检查；推送版本 tag 时自动构建
+  wheel 并创建 GitHub Release。
+- 新增 Issue Forms / Pull Request 模板与 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- README 增加 CI/版本/平台/许可徽章、社交预览图、技术分享入口与相关链接。
+- 补充 PyPI 元数据（project URLs、classifiers、keywords）与 `docs/social-preview.png`。
+- 补打历史 tag `v1.0.0`（对应提交 `70ee751`）。包版本仍为 **v1.1.0**。
 
 ### v1.1.0（2026-10-31）
 

@@ -10,18 +10,38 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
 authors = [{ name = "DSH" }]
-keywords = ["netease", "cloudmusic", "lyrics", "now-playing", "album", "cover", "windows"]
+keywords = ["netease", "cloudmusic", "lyrics", "now-playing", "album", "cover",
+            "obs", "desktop-lyrics", "windows"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Win32 (MS Windows)",
     "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
+    "Natural Language :: Chinese (Simplified)",
     "Operating System :: Microsoft :: Windows",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Desktop Environment",
     "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Players",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = ["numpy>=1.20"]
+
+[project.urls]
+Homepage = "https://github.com/maker114/netease-lyric-api"
+Repository = "https://github.com/maker114/netease-lyric-api"
+Issues = "https://github.com/maker114/netease-lyric-api/issues"
+Documentation = "https://github.com/maker114/netease-lyric-api#readme"
+Changelog = "https://github.com/maker114/netease-lyric-api/releases"
 
 [project.optional-dependencies]
 dev = ["build", "pytest"]

@@ -1,0 +1,1 @@
+netease-lyric-api 是 Windows 上读取网易云音乐实时播放状态的 Python 库：只读 cloudmusic.exe 内存拿毫秒单位进度，并补齐歌名、歌手、专辑、封面与歌词；提供 Python API、命令行、HTTP/SSE 与悬浮窗四种用法，只读免登录。本文对应 v1.1.0（fae807e）。

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 先读技术分享（原理 / 已知局限）
+    url: https://github.com/maker114/netease-lyric-api#readme
+    about: 很多“为什么拿不到进度/歌词”的问题在文档里已有说明
+  - name: 使用问题 / 环境自检
+    url: https://github.com/maker114/netease-lyric-api#16-注意事项
+    about: 先运行 netease-lyric doctor，再附上输出提交 Issue
